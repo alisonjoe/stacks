@@ -219,7 +219,13 @@ class AnnaDownloader:
             
             # Detect file extension from content-type or URL
             file_ext = None
-            content_type = head_response.headers.get('Content-Type', '')
+            content_type = head_response.headers.get('Content-Type', '').lower()
+            
+            # Check if we're getting an HTML page instead of a file
+            if 'text/html' in content_type:
+                self.logger.warning(f"URL returned HTML instead of a file: {download_url}")
+                self.logger.warning("This might be an error page or requires additional navigation")
+                return None
             
             # Try to detect extension from content type
             if 'pdf' in content_type:
@@ -340,10 +346,21 @@ class AnnaDownloader:
                     # Download to temp file
                     mode = 'ab' if downloaded > 0 else 'wb'
                     with open(temp_path, mode) as f:
+                        chunk_count = 0
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
+                                # Check first chunk for HTML content
+                                if chunk_count == 0 and downloaded == 0:
+                                    # Check if this looks like HTML
+                                    chunk_start = chunk[:500].decode('utf-8', errors='ignore').lower()
+                                    if '<!doctype html' in chunk_start or '<html' in chunk_start or '<head>' in chunk_start:
+                                        self.logger.warning("Downloaded content appears to be HTML, aborting")
+                                        temp_path.unlink(missing_ok=True)
+                                        return None
+                                
                                 f.write(chunk)
                                 downloaded += len(chunk)
+                                chunk_count += 1
                                 
                                 # Report progress
                                 if self.progress_callback and total_size:
@@ -452,7 +469,7 @@ class AnnaDownloader:
                 # Find the actual download link
                 download_link = None
                 
-                # Method 1: Look for get.php links
+                # Method 1: Look for get.php links (these are usually direct downloads)
                 for link in soup.find_all('a', href=True):
                     href = link['href']
                     if 'get.php' in href or 'main.php' in href:
@@ -465,14 +482,17 @@ class AnnaDownloader:
                 # Method 2: Look for direct download links with 'download' text
                 if not download_link:
                     for link in soup.find_all('a', href=True):
-                        if 'download' in link.get_text().lower() or 'download' in link['href'].lower():
-                            download_link = link['href']
+                        href = link['href']
+                        link_text = link.get_text().lower()
+                        # Must have "download" in text AND not be a file.php link (those are intermediate)
+                        if 'download' in link_text and 'file.php' not in href:
+                            download_link = href
                             if not download_link.startswith('http'):
                                 download_link = urljoin(mirror_url, download_link)
                             self.logger.debug(f"Found link (download text): {download_link}")
                             break
                 
-                # Method 3: Look for direct file links
+                # Method 3: Look for direct file links with extensions
                 if not download_link:
                     for link in soup.find_all('a', href=True):
                         href = link['href']
