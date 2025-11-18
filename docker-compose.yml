@@ -8,9 +8,9 @@ services:
       - "7788:7788"
     volumes:
       # REQUIRED: Change these paths to match your system
-      - /mnt/Storage01/Docker/Stacks/config:/opt/stacks/config        # Configuration folder
-      - /mnt/Storage01/Vault/# Incoming/Stacks    # Downloaded files
-      - /mnt/Storage01/Docker/Stacks/logs:/opt/stacks/logs            # Log files
+      - /path/to/config:/opt/stacks/config   # Configuration folder
+      - /path/to/downloads                   # Downloaded files
+      - /path/to/logs/logs:/opt/stacks/logs  # Log files
     restart: unless-stopped
     environment:
       # Only applies to first run, after that the config.yaml has all relevant info
