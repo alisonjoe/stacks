@@ -8,9 +8,9 @@ services:
       - "7788:7788"
     volumes:
       # REQUIRED: Change these paths to match your system
-      - /path/to/config:/opt/stacks/config   # Configuration folder
-      - /path/to/downloads                   # Downloaded files
-      - /path/to/logs/logs:/opt/stacks/logs  # Log files
+       - /path/to/config:/opt/stacks/config     # Configuration files
+       - /path/to/download:/opt/stacks/download # Downloaded files
+       - /path/to/logs:/opt/stacks/logs         # Log files
     restart: unless-stopped
     environment:
       # Only applies to first run, after that the config.yaml has all relevant info
