@@ -44,7 +44,7 @@ WORKDIR /opt/stacks
 # Set Python path to find installed packages
 ENV PYTHONPATH=/usr/local/lib/python3.11/site-packages
 
-# Bring in installed Python packages + your app
+# Bring in installed Python packages + app
 COPY --from=builder /install /usr/local
 COPY --from=builder /opt/stacks /opt/stacks
 

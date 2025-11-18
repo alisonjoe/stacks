@@ -415,10 +415,12 @@ class AnnaDownloader:
                 'zlibrary', 'z-lib',
                 'sci-hub', 'nexusstc'
             ]):
+                # Convert relative URLs to absolute URLs
+                absolute_url = urljoin(url, href)
                 download_links.append({
-                    'url': href,
+                    'url': absolute_url,
                     'text': link.get_text(strip=True),
-                    'domain': urlparse(href).netloc
+                    'domain': urlparse(absolute_url).netloc
                 })
         
         return title, download_links
