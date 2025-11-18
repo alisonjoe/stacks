@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stacks - Download Manager</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" type="image/svg+xml" href="./images/icon.svg" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <img src="./images/logo.svg" />
+      </header>
+
+      <nav class="tabs">
+        <!-- Main Tabs -->
+        <div>
+          <button class="tab-button active" data-tab="downloads">Downloads</button>
+          <button class="tab-button" data-tab="settings">Settings</button>
+        </div>
+
+        <!-- Current Status -->
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-queue">0</div>
+            <div class="stat-label">Queue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-success">0</div>
+            <div class="stat-label">Finished</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value error" id="stat-failed">0</div>
+            <div class="stat-label">Failed</div>
+          </div>
+          <div class="stat-card" id="stat-fast-card" style="display: none">
+            <div class="stat-value" style="color: var(--cyan)" id="stat-fast">0/0</div>
+            <div class="stat-label">Fast Downloads</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px">
+          <a href="https://github.com/zelestcarlyone/stacks-docker"><div id="version" class="version">Version 1.0.0</div></a>
+          <a href="/logout" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85em">Logout</a>
+        </div>
+      </nav>
+
+      <div id="downloads-tab" class="tab-content active">
+        <!-- Current Download -->
+        <div id="current-download" style="display: none">
+          <div class="current-download">
+            <h2>⬇️ Currently Downloading</h2>
+            <div class="title" id="current-title">Loading...</div>
+            <div class="md5" id="current-md5"></div>
+            <div class="time" id="current-time"></div>
+            <div class="progress-container">
+              <div class="progress-bar" id="current-progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="current-progress-text">0% - 0 B / 0 B</div>
+          </div>
+        </div>
+
+        <div class="card-holder">
+          <!-- Queue -->
+          <section class="card">
+            <div class="card-header">
+              <h2>Queue <span class="badge" id="queue-count">0</span></h2>
+              <button class="btn btn-danger" onclick="clearQueue()">Clear</button>
+            </div>
+            <div id="queue-list" class="list">
+              <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <div>Queue is empty</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- History -->
+          <section class="card">
+            <div class="card-header">
+              <h2>Recent History <span class="badge" id="history-count">0</span></h2>
+              <button class="btn btn-danger" onclick="clearHistory()">Clear</button>
+            </div>
+            <div id="history-list" class="list">
+              <div class="empty-state">
+                <div class="empty-state-icon">📝</div>
+                <div>No download history yet</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settings-tab" class="tab-content">
+        <section class="card">
+          <div class="card-header">
+            <h2>Settings</h2>
+            <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
+          </div>
+          <div class="settings-content">
+            <div class="settings-section">
+              <h3>API Key</h3>
+              <div class="settings-group">
+                <label>Your API Key (required for external tools)</label>
+                <div style="display: flex; gap: 10px; align-items: center">
+                  <input type="text" id="display-api-key" readonly value="Loading..." />
+                  <button class="btn btn-secondary" data-clipboard-action="copy" data-clipboard-target="#display-api-key">Copy</button>
+                  <button class="btn btn-danger" onclick="regenerateApiKey()">Generate New</button>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: var(--comment)">Use this key in Tampermonkey and other external tools to authenticate.</div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Login Credentials</h3>
+              <div class="settings-group">
+                <label for="setting-username">Username</label>
+                <input type="text" id="setting-username" placeholder="admin" />
+              </div>
+              <div class="settings-group">
+                <label for="setting-new-password">New Password (leave blank to keep current)</label>
+                <input type="password" id="setting-new-password" placeholder="Enter new password" />
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Downloads</h3>
+              <div class="settings-group">
+                <label for="setting-delay">Delay between downloads (seconds)</label>
+                <input type="number" id="setting-delay" min="0" max="60" value="2" />
+              </div>
+              <div class="settings-group">
+                <label for="setting-retry-count">Retry attempts for failed downloads</label>
+                <input type="number" id="setting-retry-count" min="1" max="10" value="3" />
+              </div>
+              <div class="settings-group">
+                <label for="setting-resume-attempts">Resume attempts for interrupted downloads</label>
+                <input type="number" id="setting-resume-attempts" min="1" max="10" value="3" />
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Fast Download</h3>
+              <div class="settings-group">
+                <label class="label-inline">Fast Downloads</label>
+                <label class="switch">
+                  <input type="checkbox" id="setting-fast-enabled" />
+                  <span class="slider"></span>
+                  <span class="label"></span>
+                </label>
+
+                <label for="setting-fast-key">Secret Key</label>
+                <input type="password" id="setting-fast-key" placeholder="Your Anna's Archive secret key" />
+
+                <button class="btn btn-secondary" style="margin-top: 10px" onclick="testFastKey()">Test Key</button>
+                <div id="key-test-result" class="test-result"></div>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Queue</h3>
+              <div class="settings-group">
+                <label for="setting-max-history">Maximum history items (0 = unlimited)</label>
+                <input type="number" id="setting-max-history" min="0" max="1000" value="100" />
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Logging</h3>
+              <div class="settings-group">
+                <label for="setting-log-level">Log Level</label>
+                <select id="setting-log-level">
+                  <option value="DEBUG">DEBUG</option>
+                  <option value="INFO">INFO</option>
+                  <option value="WARNING">WARNING</option>
+                  <option value="ERROR">ERROR</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <p><a href="./tamper/stacks_extension.user.js" target="_blank" data-icon="tampermonkey">Install Tampermonkey Script</a> • <a href="https://github.com/zelestcarlyone/stacks-docker" target="_blank" data-icon="github">Visit GitHub</a></p>
+      </footer>
+    </div>
+
+    <!-- Templates for dynamic content -->
+    <template id="queue-item-template">
+      <div class="list-item">
+        <div class="item-info">
+          <div class="item-title"></div>
+          <div class="item-md5"></div>
+          <div class="item-time"></div>
+        </div>
+        <button class="btn btn-danger" onclick="">Remove</button>
+      </div>
+    </template>
+
+    <template id="queue-empty-template">
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <div>Queue is empty</div>
+      </div>
+    </template>
+
+    <template id="history-empty-template">
+      <div class="empty-state">
+        <div class="empty-state-icon">📝</div>
+        <div>No download history yet</div>
+      </div>
+    </template>
+
+    <template id="history-item-template">
+      <div class="list-item">
+        <div class="item-info">
+          <div class="item-title">
+            <span class="item-status-icon"></span>
+            <span class="item-title-text"></span>
+            <span class="item-method-icon"></span>
+          </div>
+          <div class="item-md5"></div>
+          <div class="item-time"></div>
+          <div class="item-error" style="display: none"></div>
+        </div>
+        <button class="btn btn-secondary retry-btn" onclick="" style="display: none">Retry</button>
+      </div>
+    </template>
+    <script src="./script/clipboard.min.js"></script>
+    <script src="./script/app.js"></script>
+  </body>
+</html>

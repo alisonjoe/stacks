@@ -1,0 +1,28 @@
+# Stacks Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 7788
+
+login:
+  username: null  # Auto-generated on first run
+  password: null  # Auto-generated on first run (hashed)
+
+api:
+  key: null  # Auto-generated on first run
+  session_secret: null  # Auto-generated on first run
+
+downloads:
+  delay: 2
+  retry_count: 3
+  resume_attempts: 3
+
+fast_download:
+  enabled: false
+  key: null
+
+queue:
+  max_history: 100
+
+logging:
+  level: "INFO"

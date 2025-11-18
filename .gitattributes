@@ -1,0 +1,27 @@
+# Auto detect text files and perform LF normalization
+# Force LF for all code and config files
+*.sh     text eol=lf
+*.py     text eol=lf
+*.bash   text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.json   text eol=lf
+*.js     text eol=lf
+*.ts     text eol=lf
+*.html   text eol=lf
+*.css    text eol=lf
+*.md     text eol=lf
+
+# Binary files
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.svg    text
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+
+# Default fallback
+* text=auto

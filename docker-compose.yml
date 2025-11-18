@@ -1,0 +1,25 @@
+services:
+  stacks:
+    build: .
+    image: stacks:latest
+    container_name: stacks
+    ports:
+      # Change the left value if 7788 is already taken
+      - "7788:7788"
+    volumes:
+      # REQUIRED: Change these paths to match your system
+      - /mnt/Storage01/Docker/Stacks/config:/opt/stacks/config        # Configuration folder
+      - /mnt/Storage01/Vault/# Incoming/Stacks    # Downloaded files
+      - /mnt/Storage01/Docker/Stacks/logs:/opt/stacks/logs            # Log files
+    restart: unless-stopped
+    environment:
+      # Only applies to first run, after that the config.yaml has all relevant info
+      - USERNAME=admin    # Feel free to change this
+      - PASSWORD=stacks   # Please change this!
+      
+      # Uncomment to reset admin password to above values
+      # - RESET_ADMIN=true
+
+      # Set your timezone, a comprehensive list can be found here:
+      # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - TZ=UTC
