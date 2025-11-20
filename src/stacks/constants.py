@@ -1,10 +1,5 @@
 from pathlib import Path
 
-"""
-Global constants for the Stacks application.
-Central place for all paths, magic strings, and fixed values.
-"""
-
 # Paths (not user-configurable)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
