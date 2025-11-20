@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.3]
+
+### Features
+
+- Refectored large parts of the downloader:
+  - Added aria2 support for multi downloading
+  - Added ability to use Flaresolverr
+  - Updated the download logic to better catch download links
+
 ## [1.0.2] - 2025-11-18
 
 ### Hotfix
