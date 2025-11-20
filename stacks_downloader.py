@@ -12,6 +12,12 @@ FlareSolverr Logic:
 - REQUIRED for Anna's Archive slow_download servers (always protected)
 - OPTIONAL for external mirrors (fallback on 403 errors)
 - Run: docker run -d -p 8191:8191 flaresolverr/flaresolverr
+
+Cookie Caching:
+- Caches FlareSolverr cookies to /opt/stacks/cache/cookie.json
+- Cookies valid for 24 hours
+- Pre-warming available on startup
+- Auto-refresh on 403 errors
 """
 
 import argparse
@@ -24,9 +30,13 @@ import requests
 import subprocess
 import shutil
 import tempfile
+import json
 from pathlib import Path
 from urllib.parse import urlparse, urljoin, unquote
 from bs4 import BeautifulSoup
+
+# Cookie cache path
+COOKIE_CACHE_PATH = Path("/opt/stacks/cache/cookie.json")
 
 
 def extract_md5(input_string):
@@ -100,9 +110,62 @@ class AnnaDownloader:
         if flaresolverr_url:
             self.logger.info(f"FlareSolverr enabled: {flaresolverr_url}")
             self.logger.info("Using ALL download sources (Anna's Archive + external mirrors)")
+            # Load cached cookies if available
+            self._load_cached_cookies()
         else:
             self.logger.warning("FlareSolverr not configured - slow_download servers will be SKIPPED")
             self.logger.info("Using external mirrors only (Libgen, library.lol, etc.)")
+    
+    def _load_cached_cookies(self):
+        """Load cookies from cache file."""
+        if COOKIE_CACHE_PATH.exists():
+            try:
+                with open(COOKIE_CACHE_PATH, 'r') as f:
+                    data = json.load(f)
+                    # Check if cookies are recent (< 24 hours old)
+                    cached_time = data.get('timestamp', 0)
+                    if time.time() - cached_time < 86400:
+                        cookies_dict = data.get('cookies', {})
+                        for name, value in cookies_dict.items():
+                            self.session.cookies.set(name, value)
+                        self.logger.info(f"Loaded {len(cookies_dict)} cached cookies")
+                        return True
+                    else:
+                        self.logger.debug("Cached cookies expired (>24h old)")
+            except Exception as e:
+                self.logger.debug(f"Failed to load cached cookies: {e}")
+        return False
+    
+    def _save_cookies_to_cache(self, cookies_dict):
+        """Save cookies to cache file."""
+        try:
+            COOKIE_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(COOKIE_CACHE_PATH, 'w') as f:
+                json.dump({
+                    'timestamp': time.time(),
+                    'cookies': cookies_dict
+                }, f, indent=2)
+            self.logger.debug(f"Cached {len(cookies_dict)} cookies")
+        except Exception as e:
+            self.logger.debug(f"Failed to cache cookies: {e}")
+    
+    def prewarm_cookies(self):
+        """Pre-warm cookies using FlareSolverr if enabled."""
+        if not self.flaresolverr_url:
+            return False
+        
+        self.logger.info("Pre-warming cookies with FlareSolverr...")
+        # Use a real slow_download URL to get valid cookies
+        test_url = "https://annas-archive.org"
+        success, cookies, _ = self.solve_with_flaresolverr(test_url)
+        
+        if success and cookies:
+            self._save_cookies_to_cache(cookies)
+            self.logger.info("✓ Cookies pre-warmed and cached")
+            return True
+        else:
+            self.logger.warning("Failed to pre-warm cookies")
+            return False
     
     def extract_md5(self, input_string):
         """Extract MD5 hash from URL or return the MD5 if it's already one."""
@@ -157,8 +220,12 @@ class AnnaDownloader:
                 
                 self.logger.info(f"FlareSolverr: Success - got {len(cookies_dict)} cookies")
                 
+                # Apply cookies to session
                 for name, value in cookies_dict.items():
                     self.session.cookies.set(name, value)
+                
+                # Cache cookies for future use
+                self._save_cookies_to_cache(cookies_dict)
                 
                 return True, cookies_dict, html_content
             else:
@@ -438,6 +505,12 @@ class AnnaDownloader:
                 
                 downloaded_file = self.incomplete_dir / final_path.name
                 if downloaded_file.exists():
+                    # Check if file is suspiciously small (expired download page)
+                    if downloaded_file.stat().st_size < 1024:
+                        self.logger.warning("Downloaded file < 1KB - likely expired download page")
+                        downloaded_file.unlink()
+                        return None
+                    
                     final_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(downloaded_file), str(final_path))
                     self.logger.info(f"✓ Downloaded: {final_path.name}")
@@ -594,6 +667,12 @@ class AnnaDownloader:
                     if total_size and downloaded < total_size:
                         raise Exception(f"Incomplete download: {downloaded}/{total_size} bytes")
                     
+                    # Check if file is suspiciously small (expired download page)
+                    if temp_path.stat().st_size < 1024:
+                        self.logger.warning("Downloaded file < 1KB - likely expired download page")
+                        temp_path.unlink()
+                        return None
+                    
                     # Move to final location
                     final_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(temp_path), str(final_path))
@@ -712,11 +791,11 @@ class AnnaDownloader:
     
     def download_from_mirror(self, mirror_url, mirror_type, md5, title=None, resume_attempts=3):
         """
-        Download from any mirror.
+        Download from any mirror with stale cookie handling.
         
         Logic:
         - slow_download: ALWAYS use FlareSolverr (skip if not configured)
-        - external_mirror: Try direct, use FlareSolverr on 403
+        - external_mirror: Try direct, use FlareSolverr on 403 (with cookie refresh)
         """
         try:
             if mirror_type == 'slow_download':
@@ -746,20 +825,27 @@ class AnnaDownloader:
                 try:
                     response = self.session.get(mirror_url, timeout=30)
                     
-                    # If 403, try with FlareSolverr
+                    # If 403, refresh cookies and retry
                     if response.status_code == 403:
                         if self.flaresolverr_url:
-                            self.logger.warning("Got 403, retrying with FlareSolverr...")
-                            success, cookies, html_content = self.solve_with_flaresolverr(mirror_url)
-                            
-                            if success:
-                                download_link = self.parse_download_link_from_html(html_content, md5)
-                                if download_link:
-                                    self.logger.info(f"Found download URL via FlareSolverr, downloading...")
-                                    return self.download_direct(download_link, title=title, resume_attempts=resume_attempts)
+                            self.logger.warning("Got 403 - refreshing cookies with FlareSolverr...")
+                            # Pre-warm new cookies
+                            if self.prewarm_cookies():
+                                # Retry once with fresh cookies
+                                response = self.session.get(mirror_url, timeout=30)
+                                
+                                if response.status_code == 403:
+                                    self.logger.warning("Still got 403 after cookie refresh, using FlareSolverr for full solve")
+                                    success, cookies, html_content = self.solve_with_flaresolverr(mirror_url)
+                                    if success:
+                                        download_link = self.parse_download_link_from_html(html_content, md5)
+                                        if download_link:
+                                            self.logger.info(f"Found download URL via FlareSolverr, downloading...")
+                                            return self.download_direct(download_link, title=title, resume_attempts=resume_attempts)
+                                    return None
                         else:
                             self.logger.warning("Got 403 but FlareSolverr not configured")
-                        return None
+                            return None
                     
                     response.raise_for_status()
                     
@@ -918,10 +1004,13 @@ Examples:
   
   # With aria2 multi-source (parallel downloads from all mirrors)
   %(prog)s MD5 --enable-aria2 --flaresolverr-url http://192.168.1.200:8191
+  
+  # Pre-warm cookies (speeds up subsequent downloads)
+  %(prog)s MD5 --flaresolverr-url http://192.168.1.200:8191 --prewarm
         """
     )
     
-    parser.add_argument('input', help='MD5 hash or Anna\'s Archive URL')
+    parser.add_argument('input', nargs='?', help='MD5 hash or Anna\'s Archive URL')
     parser.add_argument('-o', '--output', default='./downloads', help='Output directory')
     parser.add_argument('--mirror', help='Preferred mirror domain')
     parser.add_argument('--fast-key', help='Anna\'s Archive membership key')
@@ -930,6 +1019,7 @@ Examples:
     parser.add_argument('--enable-aria2', action='store_true', help='Enable aria2 multi-source')
     parser.add_argument('--aria2-min-size', type=int, default=2, help='Min file size for aria2 (MB)')
     parser.add_argument('--aria2-chunk-size', default='1M', help='aria2 chunk size')
+    parser.add_argument('--prewarm', action='store_true', help='Pre-warm cookies (with FlareSolverr)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose logging')
     
     args = parser.parse_args()
@@ -960,6 +1050,17 @@ Examples:
         aria2_min_size_mb=args.aria2_min_size,
         aria2_chunk_size=args.aria2_chunk_size
     )
+    
+    # Pre-warm cookies if requested
+    if args.prewarm and args.flaresolverr_url:
+        downloader.prewarm_cookies()
+        if not args.input:
+            print("✓ Cookies pre-warmed and cached")
+            sys.exit(0)
+    
+    if not args.input:
+        parser.print_help()
+        sys.exit(1)
     
     success, _ = downloader.download(args.input, prefer_mirror=args.mirror)
     sys.exit(0 if success else 1)
