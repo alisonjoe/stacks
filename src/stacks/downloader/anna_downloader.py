@@ -1,23 +1,6 @@
 #!/usr/bin/env python3
 """
 Stacks - Advanced downloader for Anna's Archive
-
-Download Strategy:
-1. Fast download (membership API) - instant, no limits with membership
-2. aria2 multi-source - downloads from ALL mirrors simultaneously in 1MB chunks
-3. Slow download servers (Anna's Archive) - REQUIRES FlareSolverr for DDG-Edge
-4. External mirrors (Libgen, library.lol) - direct, FlareSolverr on 403 fallback
-
-FlareSolverr Logic:
-- REQUIRED for Anna's Archive slow_download servers (always protected)
-- OPTIONAL for external mirrors (fallback on 403 errors)
-- Run: docker run -d -p 8191:8191 flaresolverr/flaresolverr
-
-Cookie Caching:
-- Caches FlareSolverr cookies to /opt/stacks/cache/cookie.json
-- Cookies valid for 24 hours
-- Pre-warming available on startup
-- Auto-refresh on 403 errors
 """
 
 import argparse
@@ -34,9 +17,10 @@ import json
 from pathlib import Path
 from urllib.parse import urlparse, urljoin, unquote
 from bs4 import BeautifulSoup
+from stacks.constants import CACHE_PATH
 
 # Cookie cache path
-COOKIE_CACHE_PATH = Path("/opt/stacks/cache/cookie.json")
+COOKIE_CACHE_PATH = Path(CACHE_PATH)
 
 
 def extract_md5(input_string):

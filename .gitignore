@@ -32,3 +32,8 @@ coverage.xml
 # Personal scripts
 release.sh
 todo.md
+
+# Project paths
+download/
+config/
+logs/

@@ -2,7 +2,13 @@
 import os
 import sys
 import shutil
+import argparse
+import flask.cli
+import logging
+
 from pathlib import Path
+
+from stacks.constants import CONFIG_PATH, DEFAULT_CONFIG_PATH, PROJECT_ROOT, LOG_PATH, DOWNLOAD_PATH
 
 # ANSI color codes (Dracula theme)
 INFO = "\033[38;2;139;233;253m"       # cyan
@@ -30,78 +36,84 @@ def print_logo(version: str):
     print(f"{BG}{PURPLE} │                                                           {PURPLE}│ {RESET}")
     print(f"{BG}{PURPLE} └{dashes}╢v{version}╟────┘ {RESET}")
     sys.stdout.flush()  # Force flush before exec
+    sys.stdout.flush()
 
 def ensure_directories():
-    """Ensure essential directories exist"""
+    """Ensure essential directories exist."""
     dirs = [
-        Path("/opt/stacks/config"),
-        Path("/opt/stacks/logs"),
-        Path("/opt/stacks/download")
+        Path(CONFIG_PATH).parent,
+        Path(LOG_PATH),
+        Path(DOWNLOAD_PATH),
     ]
     for directory in dirs:
         directory.mkdir(parents=True, exist_ok=True)
 
-def setup_config():
-    """Check and setup configuration file"""
-    config_file = Path("/opt/stacks/config/config.yaml")
-    default_config = Path("/opt/stacks/files/config.yaml")
-    
-    print(f"◼ {INFO}Checking configuration...{RESET}")
+
+def setup_config(config_path):
+    """
+    Ensure a config file exists.
+    """
+    # Use either provided config, or default
+    cfg_path = Path(config_path) if config_path else Path(CONFIG_PATH)
+    default_cfg = Path(DEFAULT_CONFIG_PATH)
+
+    print("◼ Checking configuration...")
     sys.stdout.flush()
-    
-    if not config_file.exists():
-        print(f"  {WARN}No config.yaml found - seeding default.{RESET}")
-        sys.stdout.flush()
-        shutil.copy2(default_config, config_file)
-        config_file.chmod(0o600)
+
+    if not cfg_path.exists():
+        print("  No config.yaml found - seeding default.")
+        shutil.copy2(default_cfg, cfg_path)
+        cfg_path.chmod(0o600)
     else:
-        print(f"  {GOOD}Found config.yaml at {config_file}.{RESET}")
-        sys.stdout.flush()
-    
-    return str(config_file)
+        print(f"  Found config.yaml at {cfg_path}")
+
+    return str(cfg_path)
+
 
 def main():
-    """Main startup routine"""
+    parser = argparse.ArgumentParser(description="Start the Stacks server.")
+    parser.add_argument(
+        "-c", "--config",
+        help="Path to an alternative config.yaml file"
+    )
+    args = parser.parse_args()
+
     # Set UTF-8 encoding
-    os.environ.setdefault('LANG', 'C.UTF-8')
-    
+    os.environ.setdefault("LANG", "C.UTF-8")
+
     # Read version
-    version_file = Path("/opt/stacks/VERSION")
-    try:
-        version = version_file.read_text().strip()
-    except FileNotFoundError:
-        version = "unknown"
-    
-    # Display logo
+    version_file = PROJECT_ROOT / "VERSION"
+    version = version_file.read_text().strip() if version_file.exists() else "unknown"
     print_logo(version)
-    
+
     # Ensure directories exist
     ensure_directories()
-    
-    # Setup configuration
-    config_path = setup_config()
-    
-    # Check for admin reset
-    reset_admin = os.environ.get('RESET_ADMIN', 'false').lower() == 'true'
-    if reset_admin:
-        print(f"{WARN}! RESET_ADMIN=true detected - password will be reset!{RESET}")
-        print()
+
+    # Load or create config.yaml
+    config_path = setup_config(args.config)
+
+    # Detect password reset request
+    if os.environ.get("RESET_ADMIN", "false").lower() == "true":
+        print("! RESET_ADMIN=true detected - admin password will be reset!\n")
         sys.stdout.flush()
-    
-    # Change to application directory
-    os.chdir("/opt/stacks")
-    
-    # Start the server
-    print(f"◼ {INFO}Starting Stacks...{RESET}")
+
+    # Switch working dir
+    os.chdir(PROJECT_ROOT)
+
+    print("◼ Starting Stacks...")
     sys.stdout.flush()
-    
-    # Replace current process with stacks_server.py
-    # This is the Python equivalent of `exec python3 stacks_server.py -c "$CONFIG_FILE"`
-    os.execvp(sys.executable, [sys.executable, "stacks_server.py", "-c", config_path])
+
+    flask.cli.show_server_banner = lambda *args, **kwargs: None
+    logging.getLogger('werkzeug').disabled = True
+
+    from stacks.server.webserver import create_app
+    app = create_app(config_path)    
+    app.run(host="0.0.0.0", port=7788)
+
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"\n{WARN}Error during startup: {e}{RESET}", file=sys.stderr)
+        print(f"\nError during startup: {e}", file=sys.stderr)
         sys.exit(1)

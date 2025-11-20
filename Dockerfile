@@ -19,9 +19,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Copy application files
-COPY stacks_server.py .
-COPY stacks_downloader.py .
-COPY startup.py .
+COPY src ./src
 COPY VERSION .
 COPY web ./web
 COPY files ./files
@@ -42,7 +40,7 @@ LABEL fingerprint=$FINGERPRINT
 WORKDIR /opt/stacks
 
 # Set Python path to find installed packages
-ENV PYTHONPATH=/usr/local/lib/python3.11/site-packages
+ENV PYTHONPATH="/opt/stacks/src:/usr/local/lib/python3.11/site-packages"
 
 # Bring in installed Python packages + app
 COPY --from=builder /install /usr/local
@@ -52,4 +50,4 @@ EXPOSE 7788
 
 # No shell → must be exec form
 # -u flag runs Python in unbuffered mode for immediate output
-ENTRYPOINT ["/usr/bin/python3", "-u", "startup.py"]
+ENTRYPOINT ["/usr/bin/python3", "-m", "stacks.main"]
