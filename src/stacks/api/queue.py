@@ -7,7 +7,7 @@ from flask import (
 )
 
 from . import api_bp
-from stacks.downloader.anna_downloader import extract_md5
+from stacks.utils.md5utils import extract_md5
 from stacks.security.auth import (
     require_auth,
 )

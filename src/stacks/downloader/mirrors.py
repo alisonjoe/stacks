@@ -89,7 +89,7 @@ def download_from_mirror(d, mirror_url, mirror_type, md5, title=None, resume_att
                 d.logger.warning("Skipping slow_download - FlareSolverr not configured")
                 return None
             
-            d.logger.debug(f"Accessing slow download (via FlareSolverr)")
+            d.logger.debug("Accessing slow download (via FlareSolverr)")
             
             success, cookies, html_content = d.solve_with_flaresolverr(mirror_url)
             if not success:
@@ -101,7 +101,7 @@ def download_from_mirror(d, mirror_url, mirror_type, md5, title=None, resume_att
                 d.logger.warning("Could not find download link")
                 return None
             
-            d.logger.info(f"Found download URL, downloading...")
+            d.logger.info("Found download URL, downloading...")
             return d.download_direct(download_link, title=title, resume_attempts=resume_attempts)
         
         else:  # external_mirror
@@ -125,7 +125,7 @@ def download_from_mirror(d, mirror_url, mirror_type, md5, title=None, resume_att
                                 if success:
                                     download_link = d.parse_download_link_from_html(html_content, md5)
                                     if download_link:
-                                        d.logger.info(f"Found download URL via FlareSolverr, downloading...")
+                                        d.logger.info("Found download URL via FlareSolverr, downloading...")
                                         return d.download_direct(download_link, title=title, resume_attempts=resume_attempts)
                                 return None
                     else:
