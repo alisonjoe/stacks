@@ -66,8 +66,9 @@ function loadSettings() {
     .then((r) => r.json())
     .then((config) => {
       // Login credentials
+      document.getElementById("setting-authentification-enabled").checked = !config.login?.disable;
       document.getElementById("setting-username").value = config.login?.username || "";
-      document.getElementById("setting-new-password").value = ""; // Always clear password field
+      document.getElementById("setting-new-password").value = "";
 
       // Downloads
       document.getElementById("setting-delay").value = config.downloads?.delay || 2;
@@ -141,6 +142,7 @@ function saveSettings() {
     },
     login: {
       username: document.getElementById("setting-username").value,
+      disable: !document.getElementById("setting-authentification-enabled").checked,
     },
   };
 

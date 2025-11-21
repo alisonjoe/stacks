@@ -80,8 +80,14 @@ def clear_attempts(ip):
 
 def require_login(f):
     """Require a logged-in session for HTML pages (index, etc.)."""
-    @wraps(f)
+    @wraps(f)    
     def wrapper(*args, **kwargs):
+        cfg = current_app.stacks_config
+        disable_auth = cfg.get("login", "disable")
+
+        if disable_auth:
+            return f(*args, **kwargs)
+        
         if not session.get("logged_in"):
             # Note: blueprint name is "api", endpoint is "login"
             return redirect(url_for("api.login"))
@@ -99,12 +105,10 @@ def require_auth(f):
     def wrapper(*args, **kwargs):
         # Allow for disabled auth altogether
         cfg = current_app.stacks_config
-        try:
-            if cfg.getboolean("login", "disable"):
-                return f(*args, **kwargs)
-        except Exception:
-            pass
-        
+        disable_auth = cfg.get("login", "disable")
+
+        if disable_auth:
+            return f(*args, **kwargs)
         # Web session takes precedence
         if session.get("logged_in"):
             return f(*args, **kwargs)
@@ -129,6 +133,13 @@ def require_session_only(f):
     """Require *only* a logged-in session (UI-only endpoints)."""
     @wraps(f)
     def wrapper(*args, **kwargs):
+        # Allow for disabled auth altogether
+        cfg = current_app.stacks_config
+        disable_auth = cfg.get("login", "disable")
+
+        if disable_auth:
+            return f(*args, **kwargs)
+        
         if session.get("logged_in"):
             return f(*args, **kwargs)
         return (
