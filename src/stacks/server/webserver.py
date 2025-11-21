@@ -10,6 +10,11 @@ import logging
 
 def create_app(config_path: str):
     """Create and configure the Flask application."""
+    # ---- Setup logging ---
+    setup_logging(None)
+    logger = logging.getLogger("stacks.server")
+    logger.info("Stacks server initializing...")
+    
     app = Flask(
         __name__,
         template_folder=WWW_PATH,
@@ -20,11 +25,7 @@ def create_app(config_path: str):
 
     # ---- Load config ----
     config = Config(config_path)
-
-    # ---- Setup logging ---
-    setup_logging(config)
-    logger = logging.getLogger("stacks.server")
-    logger.info("Stacks server initializing...")
+    setup_logging()
 
     # ---- Set secret key from config ----
     app.secret_key = config.get("api", "session_secret")
@@ -39,7 +40,12 @@ def create_app(config_path: str):
     app.stacks_queue = queue
     app.stacks_worker = worker
 
+    # ---- Set default port and host ----
+    app.stacks_host = config.get("server", "host", default="0.0.0.0")
+    app.stacks_port = config.get("server", "port", default=7788)
+
+
     # ---- Register all API routes ----
     register_api(app)
-    
+    logger.info("Stacks initialized")    
     return app

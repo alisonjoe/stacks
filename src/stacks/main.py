@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 import os
 import sys
-import shutil
 import argparse
-import flask.cli
-import logging
+from stacks.server.webserver import create_app
 
 from pathlib import Path
 
-from stacks.constants import CONFIG_FILE, DEFAULT_CONFIG_FILE, PROJECT_ROOT, LOG_PATH, DOWNLOAD_PATH
+from stacks.constants import CONFIG_FILE, PROJECT_ROOT, LOG_PATH, DOWNLOAD_PATH
 
 # ANSI color codes (Dracula theme)
 INFO = "\033[38;2;139;233;253m"       # cyan
@@ -55,17 +53,16 @@ def setup_config(config_path):
     """
     # Use either provided config, or default
     cfg_path = Path(config_path) if config_path else Path(CONFIG_FILE)
-    default_cfg = Path(DEFAULT_CONFIG_FILE)
 
     print("◼ Checking configuration...")
     sys.stdout.flush()
 
     if not cfg_path.exists():
-        print("  No config.yaml found - seeding default.")
-        shutil.copy2(default_cfg, cfg_path)
+        print("  No config.yaml found — creating new one.")
+        cfg_path.write_text("{}\n")
         cfg_path.chmod(0o600)
     else:
-        print(f"  Found config.yaml at {cfg_path}")
+        print(f"  Using config at {cfg_path}")
 
     return str(cfg_path)
 
@@ -103,12 +100,10 @@ def main():
     print("◼ Starting Stacks...")
     sys.stdout.flush()
 
-    flask.cli.show_server_banner = lambda *args, **kwargs: None
-    logging.getLogger('werkzeug').disabled = True
-
-    from stacks.server.webserver import create_app
     app = create_app(config_path)    
-    app.run(host="0.0.0.0", port=7788)
+    host = app.stacks_host
+    port = app.stacks_port
+    app.run(host, port)
 
 
 if __name__ == "__main__":

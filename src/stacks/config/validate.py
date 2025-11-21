@@ -90,7 +90,7 @@ def _validate_value(value, types, key, default):
                 if is_valid_bcrypt_hash(value) and not os.environ.get('RESET_ADMIN','').lower() == 'true':
                     return value
                 
-    return _apply_default(default, key)
+    return _apply_default(default, key, value)
 
 def ensure_login_credentials(self):
     logger = logging.getLogger('config')

@@ -15,8 +15,8 @@ WWW_PATH = PROJECT_ROOT / "web"
 # File Papths
 QUEUE_FILE = CONFIG_PATH / "queue.json"
 CONFIG_FILE = CONFIG_PATH / "config.yaml"
-CONFIG_SCHEMA_FILE = CONFIG_PATH / "config_schema.yaml"
-DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_PATH / "config.yaml"
+CONFIG_SCHEMA_FILE = DEFAULT_CONFIG_PATH / "config_schema.yaml"
+# DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_PATH / "config.yaml"
 COOKIE_CACHE_FILE = CACHE_PATH / "cookie.json"
 
 # URLs

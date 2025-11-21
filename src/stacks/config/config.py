@@ -1,7 +1,11 @@
 import threading
+import logging
 import yaml
+import copy
 from stacks.constants import CONFIG_FILE, CONFIG_SCHEMA_FILE
 from stacks.config.validate import _validate, ensure_login_credentials
+
+logger = logging.getLogger('config')
 
 class Config:
     """Configuration loader with live update support"""
@@ -14,8 +18,13 @@ class Config:
         self.load_schema()
         self.load()
 
+        olddata = copy.deepcopy(self.data)
         self.data = self.validate(self.data, self.schema)
         self.ensure_login_credentials()
+        if not self.data == olddata:
+            logger.info("Some value(s) in config file did not conform to standard. Logfile has been healed.")
+            self.save()
+        
 
     def load(self):
         """Load configuration from file, or create empty dict."""
