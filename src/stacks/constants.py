@@ -9,14 +9,13 @@ INCOMPLETE_PATH = PROJECT_ROOT / "download" / "incomplete"
 LOG_PATH = PROJECT_ROOT / "logs"
 CACHE_PATH = PROJECT_ROOT / "cache"
 CONFIG_PATH = PROJECT_ROOT / "config"
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / "files"
+FILES_PATH = PROJECT_ROOT / "files"
 WWW_PATH = PROJECT_ROOT / "web"
 
 # File Papths
 QUEUE_FILE = CONFIG_PATH / "queue.json"
 CONFIG_FILE = CONFIG_PATH / "config.yaml"
-CONFIG_SCHEMA_FILE = DEFAULT_CONFIG_PATH / "config_schema.yaml"
-# DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_PATH / "config.yaml"
+CONFIG_SCHEMA_FILE = FILES_PATH / "config_schema.yaml"
 COOKIE_CACHE_FILE = CACHE_PATH / "cookie.json"
 
 # URLs

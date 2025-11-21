@@ -19,6 +19,7 @@ from stacks.security.auth import (
 logger = logging.getLogger('config')
 
 def _validate(config: dict, schema: dict) -> dict:
+    logger.debug("Validating config.")
     normalized = {}
     
     for section, section_schema in schema.items():
@@ -27,15 +28,11 @@ def _validate(config: dict, schema: dict) -> dict:
             normalized[section] = {}
 
             for key, rules in section_schema.items():
-                value = user_section.get(key, None)
-
-                allowed_types = rules.get("types", [])
-                default_value = rules.get("default")
-                
-                normalized[section][key] = _validate_value(value, allowed_types, key, default_value )
+                value = user_section.get(key, None)               
+                normalized[section][key] = _validate_value(value, rules, key)
         else:
             logging.debug(f"Error '{key}', no such key in schema.")
-            
+    logger.debug("Config validated.")
     return normalized
 
 def _apply_default(default, key, old_value):
@@ -52,15 +49,23 @@ def _apply_default(default, key, old_value):
             default = os.environ.get('USERNAME', DEFAULT_USERNAME)
     return default
 
-def _validate_value(value, types, key, default):
-    for t in types:
+def _validate_value(value, rules, key):
+    allowed_types = rules.get("types", [])
+    default = rules.get("default")
+    min_value = rules.get("min")
+    max_value = rules.get("max")
+    max_length = rules.get("max_length")
+    
+    for t in allowed_types:
         match t:
             case "STRING":
                 if isinstance(value, str):
-                    return value
+                    if max_length is None or len(value) <= max_length:
+                         return value
             case "INTEGER":
                 if isinstance(value, int):
-                    return value
+                    if (min_value is None or value >= min_value) and (max_value is None or value <= max_value):
+                        return value
             case "BOOL":
                 if isinstance(value, bool):
                     return value

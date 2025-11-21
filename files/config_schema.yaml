@@ -3,13 +3,16 @@ server:
     types: [IP, URL]
     default: "0.0.0.0"
   port:
-    types: [PORT_RANGE]
+    types: [INTEGER]
     default: 7788
+    min: 0
+    max: 65535
 
 login:
   username:
     types: [STRING]
     default: USERNAME
+    max_length: 64
   password:
     types: [BCRYPTHASH]
     default: HASH_PASSWORD
@@ -29,12 +32,18 @@ downloads:
   delay:
     types: [INTEGER]
     default: 2
+    min: 1
+    max: 300
   retry_count:
     types: [INTEGER]
     default: 3
+    min: 0
+    max: 10
   resume_attempts:
     types: [INTEGER]
     default: 3
+    min: 0
+    max: 10
 
 fast_download:
   enabled:
@@ -43,6 +52,7 @@ fast_download:
   key:
     types: [STRING, NULL]
     default: null
+    max_length: 256
 
 flaresolverr:
   enabled:
@@ -51,14 +61,19 @@ flaresolverr:
   url:
     types: [IP, URL, NULL]
     default: null
+    max_length: 256
   timeout:
     types: [INTEGER]
     default: 60
+    min: 1
+    max: 600
 
 queue:
   max_history:
     types: [INTEGER]
     default: 100
+    min: 0
+    max: 100000
 
 logging:
   level:

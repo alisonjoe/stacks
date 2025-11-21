@@ -32,7 +32,9 @@ class Config:
             try:
                 with open(self.config_path, "r") as f:
                     self.data = yaml.safe_load(f) or {}
+                    logger.debug("Loaded config.")
             except FileNotFoundError:
+                logger.debug("No config found, seeding empty config for population.")
                 self.data = {}
 
     def load_schema(self):
@@ -40,12 +42,14 @@ class Config:
         with self.lock:
             with open(self.schema_path, "r") as f:
                 self.schema = yaml.safe_load(f)
+                logger.debug("Loaded config schema.")
 
     def save(self):
         """Save configuration to file."""
         with self.lock:
             with open(self.config_path, "w") as f:
                 yaml.dump(self.data, f, default_flow_style=False, sort_keys=False)
+                logger.debug("Saved config file.")
 
     def validate(self, data, schema):
         """Invoke the schema-validator to normalize the config."""
