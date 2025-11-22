@@ -1,7 +1,6 @@
 import random
 
 def get_all_download_urls(d, md5, solve_ddos=True, max_urls=10):
-    """Get ALL possible direct download URLs for aria2 multi-source."""
     title, links = d.get_download_links(md5)
     download_urls = []
     
