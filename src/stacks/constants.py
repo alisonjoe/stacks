@@ -1,9 +1,11 @@
 from pathlib import Path
 import re
 import time
+import os
 
 # Directory paths
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# Allow override via environment variable (needed for PEX deployments)
+PROJECT_ROOT = Path(os.environ.get('STACKS_PROJECT_ROOT', Path(__file__).resolve().parent.parent.parent))
 
 DOWNLOAD_PATH = PROJECT_ROOT / "download"
 INCOMPLETE_PATH = PROJECT_ROOT / "download" / "incomplete"
