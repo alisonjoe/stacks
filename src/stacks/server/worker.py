@@ -97,11 +97,32 @@ class DownloadWorker:
             self.logger.info("Download worker started")
     
     def stop(self):
-        """Stop worker thread"""
+        """Stop worker thread and cancel any active downloads"""
+        self.logger.info("Stopping download worker...")
         self.running = False
+
+        # Mark current download as interrupted if one is active
+        if self.queue.current_download:
+            with self.queue.lock:
+                item = self.queue.current_download
+                self.logger.warning(f"Cancelling active download: {item.get('title', 'Unknown')}")
+                # Put it back in the queue so it can be resumed later
+                self.queue.queue.insert(0, {
+                    'md5': item['md5'],
+                    'title': item.get('title', 'Unknown'),
+                    'source': item.get('source'),
+                    'added_at': item.get('added_at'),
+                    'status': 'queued'
+                })
+                self.queue.current_download = None
+                self.queue.save()
+
         if self.thread:
             self.thread.join(timeout=5)
-            self.logger.info("Download worker stopped")
+            if self.thread.is_alive():
+                self.logger.warning("Worker thread did not stop gracefully within timeout")
+            else:
+                self.logger.info("Download worker stopped")
     
     def get_fast_download_info(self):
         """Get current fast download status"""

@@ -119,6 +119,15 @@ class AnnaDownloader:
     # Utils
     def extract_md5(self, input_string):
         return extract_md5(input_string)
-    
+
     def get_unique_filename(self, base_path):
         return get_unique_filename(self, base_path)
+
+    def cleanup(self):
+        """Cleanup resources (close session, etc.)"""
+        try:
+            if hasattr(self, 'session') and self.session:
+                self.logger.info("Closing HTTP session...")
+                self.session.close()
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")

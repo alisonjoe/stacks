@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import signal
 import argparse
 from stacks.server.webserver import create_app
 
@@ -67,6 +68,39 @@ def setup_config(config_path):
     return str(cfg_path)
 
 
+def setup_signal_handlers(app):
+    """Setup graceful shutdown handlers for SIGTERM and SIGINT."""
+    def shutdown_handler(signum, frame):
+        signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+        print(f"\n{WARN}◼ Received {signal_name}, shutting down gracefully...{RESET}")
+        sys.stdout.flush()
+
+        # Stop the worker thread
+        if hasattr(app, 'stacks_worker') and app.stacks_worker:
+            print(f"{INFO}  Stopping download worker...{RESET}")
+            sys.stdout.flush()
+            app.stacks_worker.stop()
+
+        # Cleanup downloader resources
+        if hasattr(app, 'stacks_worker') and app.stacks_worker and hasattr(app.stacks_worker, 'downloader'):
+            print(f"{INFO}  Cleaning up downloader...{RESET}")
+            sys.stdout.flush()
+            app.stacks_worker.downloader.cleanup()
+
+        # Save queue state
+        if hasattr(app, 'stacks_queue') and app.stacks_queue:
+            print(f"{INFO}  Saving queue state...{RESET}")
+            sys.stdout.flush()
+            app.stacks_queue.save()
+
+        print(f"{GOOD}◼ Shutdown complete{RESET}")
+        sys.stdout.flush()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, shutdown_handler)
+    signal.signal(signal.SIGINT, shutdown_handler)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Start the Stacks server.")
     parser.add_argument(
@@ -100,7 +134,11 @@ def main():
     print("◼ Starting Stacks...")
     sys.stdout.flush()
 
-    app = create_app(config_path)    
+    app = create_app(config_path)
+
+    # Setup graceful shutdown handlers
+    setup_signal_handlers(app)
+
     host = app.stacks_host
     port = app.stacks_port
     app.run(host, port)
