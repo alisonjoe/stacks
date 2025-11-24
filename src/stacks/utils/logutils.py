@@ -1,10 +1,12 @@
 import logging
 import sys
 import flask
-from stacks.constants import LOG_PATH, LOG_FORMAT, LOG_DATE_FORMAT
+from stacks.constants import LOG_PATH, LOG_FORMAT, LOG_DATE_FORMAT, LOG_VIEW_LENGTH
 from pathlib import Path
 from datetime import datetime
+from collections import deque
 
+LOG_BUFFER = deque(maxlen=LOG_VIEW_LENGTH)
 
 def setup_logging(config=None):
     """
@@ -24,6 +26,7 @@ def setup_logging(config=None):
     # ---- Create log directory ----
     log_path = Path(LOG_PATH)
     log_path.mkdir(parents=True, exist_ok=True)
+
 
     # ---- Generate Logfile name ----
     log_file = (
@@ -49,6 +52,12 @@ def setup_logging(config=None):
     console_handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
     root_logger.addHandler(console_handler)
 
+    # ---- Add UI buffer handler ----
+    ui_handler = UILogHandler()
+    ui_handler.setLevel(log_level)
+    ui_handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
+    root_logger.addHandler(ui_handler)
+
     # ---- Create file handler only when config exists ----
     if log_file:
         file_handler = logging.FileHandler(log_file)
@@ -70,3 +79,14 @@ def setup_logging(config=None):
     werkzeug_handler.setLevel(logging.ERROR)
     werkzeug_handler.setFormatter(logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT))
     werkzeug_logger.addHandler(werkzeug_handler)
+
+
+
+
+class UILogHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            LOG_BUFFER.append(msg)
+        except Exception:
+            pass

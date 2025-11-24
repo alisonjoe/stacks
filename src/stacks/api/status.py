@@ -1,5 +1,6 @@
 import logging
 from flask import jsonify, current_app
+from stacks.utils.logutils import LOG_BUFFER
 
 from . import api_bp
 from stacks.security.auth import require_auth
@@ -20,6 +21,12 @@ def api_version():
         version = f.read().strip()
     return jsonify({"version": version})
 
+
+@api_bp.get("/api/logs")
+@require_auth
+def get_logfile():
+    """Return recent console logs"""
+    return jsonify({"lines": list(LOG_BUFFER)})
 
 @api_bp.get("/api/status")
 @require_auth
