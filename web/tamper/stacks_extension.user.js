@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stacks - Anna's Archive Downloader
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.1.0
 // @description  Add download buttons to Anna's Archive that queue downloads to Stacks server
 // @author       Zelest Carlyone
 // @match        https://annas-archive.org/*
@@ -307,11 +307,11 @@
     document.head.appendChild(style);
 
     // API: Add to queue
-    function addToQueue(md5, title = 'Unknown', source = 'browser') {
+    function addToQueue(md5, source = 'browser') {
         if (!CONFIG.apiKey) {
             return Promise.reject(new Error('⚠️ API key not configured.\n\nGet your API key from:\nStacks web interface → Settings tab → API Key section\n\nThen configure it here:\nTampermonkey icon → Stacks Settings'));
         }
-        
+
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'POST',
@@ -322,7 +322,6 @@
                 },
                 data: JSON.stringify({
                     md5: md5,
-                    title: title,
                     source: source
                 }),
                 onload: (response) => {
@@ -348,12 +347,12 @@
     }
 
     // Create download button
-    function createDownloadButton(md5, title) {
+    function createDownloadButton(md5) {
         const btn = document.createElement('a');
         btn.href = '#';
         btn.className = 'custom-a text-[#2563eb] inline-block outline-offset-[-2px] outline-2 rounded-[3px] focus:outline font-semibold text-sm leading-none hover:opacity-80 relative stacks-btn';
         btn.innerHTML = '<span class="text-[15px] align-text-bottom inline-block icon-[typcn--download] mr-[1px]"></span>Download';
-        btn.title = `Add to Stacks queue: ${title}`;
+        btn.title = `Add to Stacks queue`;
 
         btn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -365,17 +364,17 @@
             btn.style.pointerEvents = 'none';
 
             try {
-                const result = await addToQueue(md5, title, 'search-page');
+                const result = await addToQueue(md5, 'search-page');
 
                 if (result.success) {
-                    showNotification(`✓ Added to queue: ${title}`, 'success');
+                    showNotification(`✓ Added to queue`, 'success');
                     btn.innerHTML = '<span class="text-[15px] align-text-bottom inline-block icon-[mdi--check] mr-[1px]"></span>Queued';
                     setTimeout(() => {
                         btn.innerHTML = originalText;
                         btn.style.pointerEvents = 'auto';
                     }, 2000);
                 } else {
-                    showNotification(`Already in queue: ${title}`, 'info');
+                    showNotification(`Already in queue`, 'info');
                     btn.innerHTML = originalText;
                     btn.style.pointerEvents = 'auto';
                 }
@@ -406,18 +405,15 @@
             const md5 = extractMD5(mainLink.href);
             if (!md5) return;
 
-            // Extract title
-            const title = mainLink.textContent.trim() || 'Unknown';
-
             // Find the "Save" button
             const saveButton = Array.from(item.querySelectorAll('a[href="#"]')).find(a => {
                 return a.innerHTML.includes('bookmark') && a.textContent.includes('Save');
             });
-            
+
             if (!saveButton) return;
 
             // Create and insert download button
-            const downloadBtn = createDownloadButton(md5, title);
+            const downloadBtn = createDownloadButton(md5);
             
             // Find the parent container with metadata
             const metadataContainer = saveButton.closest('.text-gray-800');
@@ -440,10 +436,6 @@
         if (document.body.dataset.stacksProcessed) return;
         document.body.dataset.stacksProcessed = 'true';
 
-        // Find the title
-        const titleElement = document.querySelector('h1');
-        const title = titleElement ? titleElement.textContent.trim() : 'Unknown';
-
         // Find the Save button
         const saveButton = Array.from(document.querySelectorAll('a[href="#"]')).find(a => {
             return a.innerHTML.includes('bookmark') && a.textContent.includes('Save');
@@ -452,7 +444,7 @@
         if (!saveButton) return;
 
         // Create and insert download button
-        const downloadBtn = createDownloadButton(md5, title);
+        const downloadBtn = createDownloadButton(md5);
         
         // Add separator and button after Save
         const separator = document.createTextNode(' · ');

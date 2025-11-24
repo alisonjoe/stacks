@@ -64,7 +64,6 @@ def api_queue_add():
     q = current_app.stacks_queue
     success, message = q.add(
         extracted_md5,
-        title=data.get('title'),
         source=data.get('source')
     )
     

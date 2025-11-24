@@ -147,7 +147,9 @@ function updateStatus() {
         const downloaded = formatBytes(progress.downloaded || 0);
         const total = formatBytes(progress.total_size || 0);
 
-        document.getElementById("current-title").textContent = data.current.title;
+        // Show filename if available, otherwise show MD5
+        const displayName = data.current.filename || data.current.md5;
+        document.getElementById("current-title").textContent = displayName;
         document.getElementById("current-md5").textContent = data.current.md5;
         document.getElementById("current-time").textContent = "Started: " + formatTime(data.current.started_at);
         document.getElementById("current-progress-bar").style.width = percent + "%";
@@ -267,7 +269,6 @@ function addDownload() {
     method: "POST",
     body: JSON.stringify({
       md5: md5,
-      title: null,
       source: "manual",
     }),
   })
@@ -590,7 +591,7 @@ function updateQueueList(queue) {
     const clone = template.content.cloneNode(true);
     const listItem = clone.querySelector(".list-item");
 
-    clone.querySelector(".item-title").textContent = item.title;
+    clone.querySelector(".item-title").textContent = item.md5;
     clone.querySelector(".item-md5").textContent = item.md5;
     clone.querySelector(".item-time").textContent = "Added: " + formatTime(item.added_at);
 
@@ -629,8 +630,9 @@ function updateHistoryList(history) {
       statusIcon.className = "item-status-icon error-icon";
     }
 
-    // Title
-    clone.querySelector(".item-title-text").textContent = item.title;
+    // Title - show filename if available, otherwise show MD5
+    const displayName = item.filename || item.md5;
+    clone.querySelector(".item-title-text").textContent = displayName;
 
     // Method icon (fast vs mirror)
     const methodIcon = clone.querySelector(".item-method-icon");

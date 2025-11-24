@@ -43,32 +43,31 @@ class DownloadQueue:
         except Exception as e:
             self.logger.error(f"Failed to save queue: {e}")
     
-    def add(self, md5, title=None, source=None):
+    def add(self, md5, source=None):
         """Add item to queue"""
         with self.lock:
             # Check if in queue
             if any(item['md5'] == md5 for item in self.queue):
                 return False, "Already in queue"
-            
+
             # Check if currently downloading
             if self.current_download and self.current_download['md5'] == md5:
                 return False, "Currently downloading"
-            
+
             # Check if recently SUCCESSFULLY downloaded (allow retry of failures)
             if any(item['md5'] == md5 and item.get('success', False) for item in self.history[-50:]):
                 return False, "Recently downloaded"
-            
+
             item = {
                 'md5': md5,
-                'title': title or 'Unknown',
                 'source': source,
                 'added_at': datetime.now().isoformat(),
                 'status': 'queued'
             }
-            
+
             self.queue.append(item)
             self.save()
-            self.logger.info(f"Added to queue: {title} ({md5})")
+            self.logger.info(f"Added to queue: {md5}")
             return True, "Added to queue"
     
     def get_next(self):
@@ -81,9 +80,14 @@ class DownloadQueue:
     def mark_complete(self, md5, success, filepath=None, error=None, used_fast_download=False):
         """Mark download as complete"""
         with self.lock:
+            # Extract filename from filepath if available
+            filename = None
+            if filepath:
+                filename = Path(filepath).name
+
             item = {
                 'md5': md5,
-                'title': self.current_download.get('title', 'Unknown') if self.current_download else 'Unknown',
+                'filename': filename,
                 'completed_at': datetime.now().isoformat(),
                 'success': success,
                 'filepath': str(filepath) if filepath else None,
@@ -93,12 +97,12 @@ class DownloadQueue:
             self.history.append(item)
             self.current_download = None
             self.save()
-            
+
             if success:
                 method = "fast download" if used_fast_download else "mirror"
-                self.logger.info(f"Download complete ({method}): {item['title']}")
+                self.logger.info(f"Download complete ({method}): {filename or md5}")
             else:
-                self.logger.warning(f"Download failed: {item['title']} - {error}")
+                self.logger.warning(f"Download failed: {md5} - {error}")
     
     def get_status(self):
         """Get current queue status"""
@@ -148,23 +152,22 @@ class DownloadQueue:
                 if item['md5'] == md5 and not item.get('success', False):
                     failed_item = item
                     break
-            
+
             if not failed_item:
                 return False, "Item not found in failed history"
-            
+
             # Remove from history
             self.history = [item for item in self.history if item['md5'] != md5]
-            
+
             # Add back to queue
             new_item = {
                 'md5': md5,
-                'title': failed_item.get('title', 'Unknown'),
                 'source': 'retry',
                 'added_at': datetime.now().isoformat(),
                 'status': 'queued'
             }
-            
+
             self.queue.append(new_item)
             self.save()
-            self.logger.info(f"Retrying failed download: {failed_item.get('title')} ({md5})")
+            self.logger.info(f"Retrying failed download: {md5}")
             return True, "Added to queue for retry"

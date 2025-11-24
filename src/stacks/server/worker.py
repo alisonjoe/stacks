@@ -155,22 +155,27 @@ class DownloadWorker:
                     'percent': 0
                 }
             
-            self.logger.info(f"Starting download: {item['title']} ({item['md5']})")
-            
+            self.logger.info(f"Starting download: {item['md5']}")
+
+            # Update current download with filename if available
+            if hasattr(self.downloader, '_current_filename'):
+                with self.queue.lock:
+                    if self.queue.current_download:
+                        self.queue.current_download['filename'] = self.downloader._current_filename
+
             try:
-                success, used_fast_download = self.downloader.download(
-                    item['md5'], 
-                    resume_attempts=resume_attempts,
-                    title_override=item.get('title')
+                success, used_fast_download, filepath = self.downloader.download(
+                    item['md5'],
+                    resume_attempts=resume_attempts
                 )
-                
+
                 if success:
-                    self.queue.mark_complete(item['md5'], True, used_fast_download=used_fast_download)
+                    self.queue.mark_complete(item['md5'], True, filepath=filepath, used_fast_download=used_fast_download)
                 else:
                     self.queue.mark_complete(item['md5'], False, error="Download failed")
-                
+
             except Exception as e:
-                self.logger.error(f"Download error: {item['title']} - {e}")
+                self.logger.error(f"Download error: {item['md5']} - {e}")
                 self.queue.mark_complete(item['md5'], False, error=str(e))
             
             # Rate limiting
