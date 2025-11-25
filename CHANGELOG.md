@@ -8,13 +8,16 @@
 - Added the ability to disable authentification
 - Log console added to front-end
 - Made shutdowns more graceful
-- Refectored large parts of the downloader:
-  - Added ability to use Flaresolverr
+- Refectored the downloader completely:
+  - Added ability to use Flaresolverr and warm cookies for downloader
+  - Per-domain cookie caching system - each mirror gets its own cookie file for reuse
   - Updated the download logic to better catch download links
   - Downloads are randomized to spread load across multiple servers
   - Downloader identifies files files that are unreasonably small and tries next server
   - Added a more secure way of finding the correct file name
   - More information on the status page about what's happening with a download
+  - Added MD5 checksum verification for all downloads
+  - Real-time status updates showing mirror progress and download stages
 - Removed alerts and replaced them with a new toast system
 
 ### Minor changes

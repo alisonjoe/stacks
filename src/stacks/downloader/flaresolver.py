@@ -34,10 +34,10 @@ def solve_with_flaresolverr(d, url):
             # Apply cookies to session
             for name, value in cookies_dict.items():
                 d.session.cookies.set(name, value)
-            
-            # Cache cookies for future use
-            d.save_cookies_to_cache(cookies_dict)
-            
+
+            # Cache cookies for this domain (for reuse on retry/future downloads)
+            d.save_cookies_to_cache(cookies_dict, domain=url)
+
             return True, cookies_dict, html_content
         else:
             error_msg = data.get('message', 'Unknown error')

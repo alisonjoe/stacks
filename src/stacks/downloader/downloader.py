@@ -66,12 +66,12 @@ class AnnaDownloader:
         self.load_cached_cookies()
     
     # Cookies
-    def load_cached_cookies(self):
-        return _load_cached_cookies(self)
-    
-    def save_cookies_to_cache(self, cookies_dict):
-        return _save_cookies_to_cache(self, cookies_dict)
-    
+    def load_cached_cookies(self, domain='annas-archive.org'):
+        return _load_cached_cookies(self, domain)
+
+    def save_cookies_to_cache(self, cookies_dict, domain='annas-archive.org'):
+        return _save_cookies_to_cache(self, cookies_dict, domain)
+
     def prewarm_cookies(self):
         return _prewarm_cookies(self)
     

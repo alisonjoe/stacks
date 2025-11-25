@@ -10,14 +10,8 @@ def download_from_mirror(d, mirror_url, mirror_type, md5, title=None, resume_att
         if mirror_type == 'slow_download':
             d.logger.debug("Accessing slow download (via cookies)")
 
-            # Ensure we have cookies (load from cache or warm new ones)
-            if not d.session.cookies:
-                d.logger.info("No cookies in session, loading from cache...")
-                if not d.load_cached_cookies():
-                    d.logger.info("No cached cookies, pre-warming new ones...")
-                    if not d.prewarm_cookies():
-                        d.logger.warning("Failed to obtain cookies for slow_download")
-                        return None
+            # Try to load cached cookies for this domain
+            d.load_cached_cookies(domain='annas-archive.org')
 
             if hasattr(d, 'status_callback'):
                 d.status_callback("Accessing slow download page...")
@@ -26,19 +20,37 @@ def download_from_mirror(d, mirror_url, mirror_type, md5, title=None, resume_att
                 # Try to fetch the slow_download page with cookies
                 response = d.session.get(mirror_url, timeout=30)
 
-                # If we get a challenge page (403/503), refresh cookies
+                # If we get a challenge page (403/503), solve it with FlareSolverr
                 if response.status_code in [403, 503]:
-                    d.logger.warning(f"Got {response.status_code}, refreshing cookies...")
+                    if not d.flaresolverr_url:
+                        d.logger.warning(f"Got {response.status_code} but no FlareSolverr configured")
+                        return None
+
+                    d.logger.warning(f"Got {response.status_code}, solving challenge with FlareSolverr...")
 
                     if hasattr(d, 'status_callback'):
-                        d.status_callback("Refreshing cookies...")
+                        d.status_callback("Solving CAPTCHA with FlareSolverr...")
 
-                    if d.prewarm_cookies():
-                        d.logger.info("Retrying with fresh cookies...")
-                        response = d.session.get(mirror_url, timeout=30)
-                    else:
-                        d.logger.error("Failed to refresh cookies")
+                    # Solve challenge for THIS specific URL
+                    success, cookies, html_content = d.solve_with_flaresolverr(mirror_url)
+
+                    if not success:
+                        d.logger.error("FlareSolverr failed")
                         return None
+
+                    if hasattr(d, 'status_callback'):
+                        d.status_callback("Extracting download link...")
+
+                    download_link = d.parse_download_link_from_html(html_content, md5, mirror_url)
+                    if not download_link:
+                        d.logger.warning("Could not find download link")
+                        return None
+
+                    if hasattr(d, 'status_callback'):
+                        d.status_callback("Downloading file...")
+
+                    d.logger.info("Found download URL via FlareSolverr, downloading...")
+                    return d.download_direct(download_link, title=title, resume_attempts=resume_attempts, md5=md5)
 
                 response.raise_for_status()
 
@@ -62,6 +74,9 @@ def download_from_mirror(d, mirror_url, mirror_type, md5, title=None, resume_att
         
         else:  # external_mirror
             d.logger.debug(f"Accessing external mirror: {mirror_url}")
+
+            # Try to load cached cookies for this mirror
+            d.load_cached_cookies(domain=mirror_url)
 
             try:
                 response = d.session.get(mirror_url, timeout=30)

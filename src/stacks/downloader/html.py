@@ -94,11 +94,7 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
                 if md5_prefix not in url:
                     continue
 
-                if "~" in url:
-                    base = url.split("~")[0]
-                    d.logger.debug(f"Found clipboard URL (normalized): {base}")
-                    return base
-
+                # Return the full URL including signature (everything after ~/)
                 d.logger.debug(f"Found clipboard URL: {url}")
                 return url
             
@@ -111,11 +107,7 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
             if md5_prefix not in text:
                 continue
 
-            if "~" in text:
-                base = text.split("~")[0]
-                d.logger.debug(f"Found raw URL in span (normalized): {base}")
-                return base
-
+            # Return the full URL including signature
             d.logger.debug(f"Found raw URL in span: {text}")
             return text
 

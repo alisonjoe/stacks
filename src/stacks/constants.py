@@ -19,7 +19,7 @@ WWW_PATH = PROJECT_ROOT / "web"
 QUEUE_FILE = CONFIG_PATH / "queue.json"
 CONFIG_FILE = CONFIG_PATH / "config.yaml"
 CONFIG_SCHEMA_FILE = FILES_PATH / "config_schema.yaml"
-COOKIE_CACHE_FILE = CACHE_PATH / "cookie.json"
+COOKIE_CACHE_DIR = CACHE_PATH  # Directory for domain-specific cookie files
 
 # URLs
 FAST_DOWNLOAD_API_URL = "https://annas-archive.org/dyn/api/fast_download.json"
