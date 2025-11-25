@@ -30,6 +30,9 @@
 - Broke out everything into modules
 - Switched from CSS to SCSS for maintainability
 
+### Bug fixes
+- The way file names are grabbed are now more robust and we should have no files named "Anna's Archive" or "Unknown" anymore.
+
 ## [1.0.2] - 2025-11-18
 
 ### Hotfix

@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 from stacks.downloader.sites.zlib import parse_zlib_download_link, is_zlib_domain
+from constants import LEGAL_FILES
 
 def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
         """
@@ -79,7 +80,7 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
             
             # Look for download indicators
             if 'download' in link_text or 'get' in link_text:
-                if any(ext in href.lower() for ext in ['.epub', '.pdf', '.mobi', '.azw3', '.cbr', '.cbz', '.djvu']) \
+                if any(ext in href.lower() for ext in LEGAL_FILES) \
                    or 'get.php' in href.lower() or 'main.php' in href.lower():
                     d.logger.debug(f"Found download link via fallback: {href}")
                     return href
@@ -135,13 +136,7 @@ def get_download_links(d, md5):
                 filepath_span = element.find_all('span')[1] if len(element.find_all('span')) > 1 else None
                 if filepath_span:
                     filepath_text = filepath_span.get_text().strip()
-                    # Extract just the filename from the path (remove directory prefix like "lgli/" or full paths)
-                    # Handle various cases:
-                    # - "lgli/Grump of Misty Mountain_ Misty - Debra Elise.epub"
-                    # - "lgrsfic/Canoeing+into+Chaos+-+Misty+Spellman.epub"
-                    # - "lgli/R:\0day\eng\2013-12-27 Part 2-2\Misty Reigenborn.mobi"
-                    # - "lgli/Misty Reigenborn - Misty Reigenborn Romance Boxed Set (mobi)"
-
+                    
                     # First, handle Windows-style paths (R:\...\filename)
                     if '\\' in filepath_text:
                         filename = filepath_text.split('\\')[-1]
@@ -174,7 +169,7 @@ def get_download_links(d, md5):
         downloads_panel = soup.find('div', id='md5-panel-downloads')
         if not downloads_panel:
             d.logger.warning("Could not find downloads panel on page")
-            return title, links
+            return filename, links
         
         # Slow_download links - only accept "no waitlist" ones
         for li in downloads_panel.find_all('li', class_='list-disc'):

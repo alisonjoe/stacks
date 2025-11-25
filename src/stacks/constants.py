@@ -50,3 +50,6 @@ KNOWN_MD5 = "d6e1dc51a50726f00ec438af21952a45"
 
 # Cache busting
 TIMESTAMP = time.time()
+
+# Legal files
+LEGAL_FILES = ['.7z', '.ai', '.azw', '.azw3', '.cb7', '.cbr', '.cbz', '.chm', '.djvu', '.doc', '.docx', '.epub', '.exe', '.fb2', '.gz', '.htm', '.html', '.htmlz', '.jpg', '.json', '.lit', '.lrf', '.mht', '.mobi', '.odt', '.pdb', '.pdf', '.ppt', '.pptx', '.prc', '.rar', '.rtf', '.snb', '.tar', '.tif', '.txt', '.updb', '.xls', '.xlsx', '.zip']

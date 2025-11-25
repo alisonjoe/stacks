@@ -88,7 +88,7 @@ def orchestrate_download(d, input_string, prefer_mirror=None, resume_attempts=3,
             if i < len(links) - 1:
                 d.logger.info("Trying next mirror...")
                 if hasattr(d, 'status_callback'):
-                    d.status_callback(f"Mirror failed, trying next mirror...")
+                    d.status_callback("Mirror failed, trying next mirror...")
 
     d.logger.error("All mirrors failed")
     return False, False, None

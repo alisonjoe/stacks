@@ -28,27 +28,25 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
     """
     try:
         # Determine filename
-        if title:
-            filename = re.sub(r'[<>:"/\\|?*]', '_', title)
-        else:
+        if not title:
+            d.logger.warning("No title provided, extracting from URL")
             parsed_url = urlparse(download_url)
             filename = unquote(Path(parsed_url.path).name)
             if not filename:
-                filename = 'download'
-        
-        # Ensure extension
-        if '.' not in filename:
-            ext = '.epub'
-            if '.pdf' in download_url.lower():
-                ext = '.pdf'
-            elif '.mobi' in download_url.lower() or '.azw' in download_url.lower():
-                ext = '.mobi'
-            elif '.cbr' in download_url.lower() or '.cbz' in download_url.lower():
-                ext = '.cbz'
-            filename = filename + ext
-        
-        # Clean filename
-        filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+                filename = 'download.epub'  # Default fallback
+        else:
+            # Clean filename (remove invalid characters)
+            filename = re.sub(r'[<>:"/\\|?*]', '_', title)
+
+        # Validate extension - warn if suspicious but don't modify
+        from stacks.constants import LEGAL_FILES
+        file_ext = Path(filename).suffix.lower()
+
+        if not file_ext:
+            d.logger.warning(f"Filename has no extension: {filename}, adding .epub")
+            filename = filename + '.epub'
+        elif file_ext not in LEGAL_FILES:
+            d.logger.warning(f"Unusual file extension: {file_ext} (not in known legal files list)")
         
         # Get unique path
         base_final_path = d.output_dir / filename
@@ -115,7 +113,7 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
                     if file_md5.lower() != md5.lower():
                         d.logger.error(f"MD5 mismatch: expected {md5}, got {file_md5}")
                         if hasattr(d, 'status_callback'):
-                            d.status_callback(f"MD5 verification failed - file corrupted")
+                            d.status_callback("MD5 verification failed - file corrupted")
                         # Reset progress to 0%
                         if d.progress_callback:
                             d.progress_callback({
