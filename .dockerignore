@@ -59,3 +59,4 @@ temp/
 /cache/
 /download/
 /logs/
+web/css/*.map
