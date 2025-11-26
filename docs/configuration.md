@@ -29,8 +29,8 @@ fast_download:
 
 flaresolverr:
   enabled: false # Enables or disables the use of FlareSolverr
-  url: null # The url and port of your FlareSolverr instance
-  timeout: 60 # How long to wait for FlareSolverr to return a result
+  url: null # The URL and port of your FlareSolverr instance (e.g., http://flaresolverr:8191)
+  timeout: 60 # How long to wait for FlareSolverr to return a result (10-300 seconds)
 
 queue:
   max_history: 100

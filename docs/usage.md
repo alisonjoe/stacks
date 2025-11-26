@@ -14,6 +14,36 @@ The dashboard updates in real-time every 2 seconds, showing:
 - Recent download history with success/failure indicators
 - Fast download quota (when enabled)
 
+## FlareSolverr Integration
+
+### What is FlareSolverr?
+
+FlareSolverr is a proxy server that solves Cloudflare and DDoS-Guard challenges. Many mirror sites use these protections, which can block automated downloads. FlareSolverr bypasses these challenges, allowing Stacks to download from protected mirrors.
+
+### When do you need it?
+
+- **Recommended for most users** - Many slow download mirrors are protected by Cloudflare or DDoS-Guard
+- **Required if downloads fail with 403 errors** - This indicates protection is blocking the download
+- **Optional if using only fast downloads** - Fast download API doesn't need FlareSolverr
+
+### Setup
+
+If you used the provided docker-compose.yml, FlareSolverr is already included and configured. If not:
+
+1. Deploy FlareSolverr (see docker-compose.yml for reference)
+2. In Stacks Settings tab:
+   - Enter FlareSolverr URL (e.g., `http://flaresolverr:8191`)
+   - Set timeout (60 seconds recommended)
+   - Click "Test FlareSolverr" to verify connection
+   - Enable FlareSolverr and save settings
+
+### How it works
+
+- Stacks automatically uses FlareSolverr when it encounters 403 errors
+- Cookies are cached per-domain for 24 hours to reduce FlareSolverr calls
+- Pre-warming: Cookies are refreshed automatically on startup
+- No manual intervention needed once configured
+
 ## Getting a Fast Download Key
 
 1. Become a member of Anna's Archive (supports the project!)

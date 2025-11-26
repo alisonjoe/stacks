@@ -19,6 +19,7 @@
   - Added MD5 checksum verification for all downloads
   - Real-time status updates showing mirror progress and download stages
 - Removed alerts and replaced them with a new toast system
+- Added in Flaresolverr to the installation example
 
 ### Minor changes
 

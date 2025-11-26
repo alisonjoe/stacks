@@ -42,14 +42,21 @@ You can deploy it with either **Docker Compose** or the **Docker CLI**.
 
 - Docker and Docker Compose installed
 - _(Optional)_ Anna's Archive membership for fast downloads
+- _(Optional)_ FlareSolverr for solving Cloudflare/DDoS-guard
 
 1. Create a file named `docker-compose.yaml` and add the following:
 
    ```yaml
+   networks:
+     default:
+       name: stacks
+
    services:
      stacks:
        image: zelest/stacks:latest
        container_name: stacks
+       stop_signal: SIGTERM
+       stop_grace_period: 30s
        ports:
          # Change the left port if 7788 is already in use
          - "7788:7788"
@@ -67,9 +74,25 @@ You can deploy it with either **Docker Compose** or the **Docker CLI**.
          # Uncomment to reset the admin password to the above values on startup
          # - RESET_ADMIN=true
 
+         # If you're using the included flaresolverr, this will automatically connect it.
+         # If you already got it running, you can change this address to match your local
+         # setup, or delete this variable and set it up inside Stacks later.
+         - SOLVERR_URL=flaresolverr:8191
+
          # Set your timezone:
          # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
          - TZ=UTC
+
+     # Optional, but recommended - bypasses Cloudflare and DDoS-Guard protection on mirror sites.
+     # Required if you encounter 403 errors when downloading. Not needed for fast downloads.
+     flaresolverr:
+       image: ghcr.io/flaresolverr/flaresolverr:latest
+       container_name: flaresolverr
+       ports:
+         - "8191:8191"
+       environment:
+         - LOG_LEVEL=info
+       restart: unless-stopped
    ```
 
 2. Update the volume paths to wherever you want Stacks to keep its files.
@@ -90,6 +113,7 @@ If you prefer running Stacks without Docker Compose, you can use the Docker CLI 
 
 - Docker installed
 - _(Optional)_ Anna's Archive membership for fast downloads
+- _(Optional)_ FlareSolverr for solving Cloudflare/DDoS-guard
 
 1. Create the required folders on your host:
 
@@ -97,17 +121,33 @@ If you prefer running Stacks without Docker Compose, you can use the Docker CLI 
    mkdir -p /path/to/config /path/to/download /path/to/logs
    ```
 
-2. Run the container:
-
+2. Set up the network:
+   ```bash
+   docker network create stacks
+   ```
+3. Set up FlareSolverr
+   ```bash
+   docker run -d \
+     --name flaresolverr \
+     --network stacks \
+     -p 8191:8191 \
+     -e LOG_LEVEL=info \
+     --restart unless-stopped \
+     ghcr.io/flaresolverr/flaresolverr:latest
+   ```
+4. Set up Stacks
    ```bash
    docker run -d \
      --name stacks \
+     --network stacks \
+     --stop-signal SIGTERM \
      -p 7788:7788 \
      -v /path/to/config:/opt/stacks/config \
      -v /path/to/download:/opt/stacks/download \
      -v /path/to/logs:/opt/stacks/logs \
      -e USERNAME=admin \
      -e PASSWORD=stacks \
+     -e SOLVERR_URL=flaresolverr:8191 \
      -e TZ=UTC \
      --restart unless-stopped \
      zelest/stacks:latest
@@ -131,7 +171,7 @@ If you prefer running Stacks without Docker Compose, you can use the Docker CLI 
 3. Go to **Settings** tab
 4. **Change your password** in the Login Credentials section
 5. Copy your API key for usage with the Tampermonkey script in step 9
-6. _(Optional)_ Configure your Anna's Archive [fast download key](./docs/usage.md#getting-a-fast-download-key) and enable fast downloads. 
+6. _(Optional)_ Configure your Anna's Archive [fast download key](./docs/usage.md#getting-a-fast-download-key) and enable fast downloads.
 7. Adjust download delays and retry settings as needed
 8. Click **Save Settings**
 9. Install the Tampermonkey Script (see [the Tampermonkey documentation](./docs/tampermonkey.md) for more information)
