@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 import time
 import os
+import logging
 
 # Directory paths
 # Allow override via environment variable (needed for PEX deployments)
@@ -53,3 +54,31 @@ TIMESTAMP = time.time()
 
 # Legal files
 LEGAL_FILES = ['.7z', '.ai', '.azw', '.azw3', '.cb7', '.cbr', '.cbz', '.chm', '.djvu', '.doc', '.docx', '.epub', '.exe', '.fb2', '.gz', '.htm', '.html', '.htmlz', '.jpg', '.json', '.lit', '.lrf', '.mht', '.mobi', '.odt', '.pdb', '.pdf', '.ppt', '.pptx', '.prc', '.rar', '.rtf', '.snb', '.tar', '.tif', '.txt', '.updb', '.xls', '.xlsx', '.zip']
+
+# Version information (loaded once at startup)
+def _load_version():
+    """Load version from version file"""
+    try:
+        version_file = PROJECT_ROOT / "VERSION"
+        with open(version_file) as f:
+            return f.read().strip()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Failed to load version: {e}")
+        return "unknown"
+
+def _load_tamper_version():
+    """Load tampermonkey script version from script metadata"""
+    try:
+        tamper_script = PROJECT_ROOT / "web" / "tamper" / "stacks_extension.user.js"
+        if tamper_script.exists():
+            with open(tamper_script, 'r', encoding='utf-8') as f:
+                content = f.read(2000)  # Read first 2000 chars (metadata block)
+                match = re.search(r'//\s*@version\s+(\S+)', content)
+                if match:
+                    return match.group(1)
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Failed to load tampermonkey version: {e}")
+    return None
+
+VERSION = _load_version()
+TAMPER_VERSION = _load_tamper_version()

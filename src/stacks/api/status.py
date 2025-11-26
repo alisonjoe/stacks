@@ -16,10 +16,13 @@ def health():
 
 @api_bp.get("/api/version")
 def api_version():
-    """Get current version"""
-    with open("VERSION") as f:
-        version = f.read().strip()
-    return jsonify({"version": version})
+    """Get current version and tampermonkey script version"""
+    from stacks.constants import VERSION, TAMPER_VERSION
+
+    return jsonify({
+        "version": VERSION,
+        "tamper_version": TAMPER_VERSION
+    })
 
 
 @api_bp.get("/api/logs")
