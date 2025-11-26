@@ -25,7 +25,7 @@ def create_app(config_path: str):
 
     # ---- Load config ----
     config = Config(config_path)
-    setup_logging()
+    setup_logging(config)
 
     # ---- Set secret key from config ----
     app.secret_key = config.get("api", "session_secret")
