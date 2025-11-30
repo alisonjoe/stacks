@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from stacks.downloader.sites.zlib import parse_zlib_download_link, is_zlib_domain
 from stacks.constants import LEGAL_FILES
 
+
 def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
         """
         Parse HTML to extract the actual download link.
@@ -30,10 +31,10 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
 
         # Fall back to generic parsing
         soup = BeautifulSoup(html_content, 'html.parser')
-        
+
         # Get first 12 chars of MD5 - this is what appears in download URLs
         md5_prefix = md5[:12]
-        
+
         # Domains to skip (not actual file hosts)
         skip_domains = [
             'jdownloader.org', 'telegram.org', 't.me', 'discord.gg',
@@ -64,26 +65,43 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
             if md5_prefix in href.lower():
                 d.logger.debug(f"Found download link with MD5 prefix: {href}")
                 return href
-        
+
         # Method 2: Fallback for external mirrors - look for file extensions
         for link in soup.find_all('a', href=True):
             href = link['href']
             link_text = link.get_text().strip().lower()
-            
+
             # Must be absolute URL
             if not href.startswith('http'):
                 continue
-            
+
             # Skip navigation
             if any(skip in href.lower() for skip in skip_domains):
                 continue
-            
+
             # Look for download indicators
             if 'download' in link_text or 'get' in link_text:
-                if any(ext in href.lower() for ext in LEGAL_FILES) \
-                   or 'get.php' in href.lower() or 'main.php' in href.lower():
-                    d.logger.debug(f"Found download link via fallback: {href}")
+                # ---------------- [修改开始] ----------------
+                # 强制过滤：只有这些后缀才被视为有效下载链
+                # 这里的逻辑是：如果链接包含 .pdf，直接忽略
+                target_exts = ['.epub', '.mobi', '.azw3']
+
+                # 检查链接是否包含我们想要的后缀
+                has_target_ext = any(ext in href.lower() for ext in target_exts)
+
+                # 检查链接是否包含我们不想要的后缀 (双重保险)
+                has_bad_ext = any(ext in href.lower() for ext in ['.pdf', '.txt', '.doc'])
+
+                if has_target_ext and not has_bad_ext:
+                    d.logger.debug(f"Found strict format download link: {href}")
                     return href
+
+                # 如果是 php 动态链接 (如 get.php)，无法通过后缀判断，
+                # 但我们可以暂且信任它，或者选择跳过 (视情况而定)
+                if ('get.php' in href.lower() or 'main.php' in href.lower()) and not has_bad_ext:
+                     d.logger.debug(f"Found PHP download link: {href}")
+                     return href
+                # ---------------- [修改结束] ----------------
 
         # Method 3: clipboard buttons containing real URLs
         for btn in soup.find_all('button', onclick=True):
@@ -98,7 +116,7 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
                 # Return the full URL including signature (everything after ~/)
                 d.logger.debug(f"Found clipboard URL: {url}")
                 return url
-            
+
         # Method 4: spans containing raw URLs
         for span in soup.find_all('span'):
             text = span.get_text(strip=True)
@@ -114,7 +132,7 @@ def parse_download_link_from_html(d, html_content, md5, mirror_url=None):
 
 
         return None
-    
+
 def get_download_links(d, md5):
     """Get download links from Anna's Archive."""
     url = f"https://annas-archive.org/md5/{md5}"
@@ -136,7 +154,7 @@ def get_download_links(d, md5):
                 filepath_span = element.find_all('span')[1] if len(element.find_all('span')) > 1 else None
                 if filepath_span:
                     filepath_text = filepath_span.get_text().strip()
-                    
+
                     # First, handle Windows-style paths (R:\...\filename)
                     if '\\' in filepath_text:
                         filename = filepath_text.split('\\')[-1]
@@ -164,38 +182,38 @@ def get_download_links(d, md5):
                 filename = "Unknown"
 
         links = []
-        
+
         # Find the downloads panel
         downloads_panel = soup.find('div', id='md5-panel-downloads')
         if not downloads_panel:
             d.logger.warning("Could not find downloads panel on page")
             return filename, links
-        
+
         # Slow_download links - only accept "no waitlist" ones
         for li in downloads_panel.find_all('li', class_='list-disc'):
             a = li.find('a', href=True)
             if not a:
                 continue
-            
+
             href = a['href']
             li_text = li.get_text().strip()
-            
+
             # Skip fast_download links (we handle those via API)
             if '/fast_download/' in href:
                 continue
-            
+
             # Only accept slow_download links
             if '/slow_download/' in href:
                 # Skip waitlist servers (they have 60-second JavaScript countdown)
                 if 'slightly faster but with waitlist' in li_text.lower():
                     d.logger.debug(f"Skipping waitlist server: {a.get_text().strip()}")
                     continue
-                
+
                 # Accept no-waitlist servers
                 if 'no waitlist' in li_text.lower():
                     full_url = urljoin(url, href)
                     server_name = a.get_text().strip() or "Slow Partner Server"
-                    
+
                     links.append({
                         'url': full_url,
                         'domain': 'annas-archive.org',
@@ -203,7 +221,7 @@ def get_download_links(d, md5):
                         'type': 'slow_download'
                     })
                     d.logger.debug(f"Added no-waitlist server: {server_name}")
-        
+
         # External mirrors - look in js-show-external ul
         external_ul = downloads_panel.find('ul', class_='js-show-external')
         if external_ul:

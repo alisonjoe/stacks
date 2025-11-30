@@ -12,7 +12,7 @@ class DownloadWorker:
         self.running = False
         self.thread = None
         self.logger = logging.getLogger('worker')
-        
+
         # Progress callback to update current download
         def progress_callback(progress):
             if self.queue.current_download:
@@ -33,7 +33,7 @@ class DownloadWorker:
         self.progress_callback = progress_callback
         self.status_callback = status_callback
         self.recreate_downloader()
-    
+
     def recreate_downloader(self):
         """Recreate downloader with current config"""
         # Get fast download config from main config
@@ -44,15 +44,15 @@ class DownloadWorker:
             'path_index': 0,
             'domain_index': 0
         }
-        
+
         # Get FlareSolverr config
         flaresolverr_enabled = self.config.get('flaresolverr', 'enabled', default=False)
         flaresolverr_url = self.config.get('flaresolverr', 'url', default='http://localhost:8191')
         flaresolverr_timeout = self.config.get('flaresolverr', 'timeout', default=60)
-        
+
         # Convert timeout to milliseconds (downloader expects milliseconds)
         flaresolverr_timeout_ms = flaresolverr_timeout * 1000
-        
+
         # Pass None if FlareSolverr is disabled, otherwise pass the URL
         self.downloader = AnnaDownloader(
             output_dir=DOWNLOAD_PATH,
@@ -63,13 +63,13 @@ class DownloadWorker:
             flaresolverr_url=flaresolverr_url if flaresolverr_enabled else None,
             flaresolverr_timeout=flaresolverr_timeout_ms
         )
-        
+
         # Test fast download key if enabled and key is present
         if fast_config['enabled'] and fast_config['key']:
             self.logger.info("Testing fast download key...")
             try:
                 success = self.downloader.refresh_fast_download_info(force=True)
-                
+
                 if success:
                     info = self.downloader.get_fast_download_info()
                     self.logger.info(f"Fast download key valid - {info.get('downloads_left')}/{info.get('downloads_per_day')} downloads available")
@@ -77,7 +77,7 @@ class DownloadWorker:
                     self.logger.warning("Fast download key test failed")
             except Exception as e:
                 self.logger.error(f"Failed to test fast download key: {e}")
-        
+
         # Test FlareSolverr if enabled
         if flaresolverr_enabled and flaresolverr_url:
             # Normalize URL for testing (same as downloader does)
@@ -96,13 +96,13 @@ class DownloadWorker:
             except Exception as e:
                 self.logger.error(f"Failed to connect to FlareSolverr: {e}")
                 self.logger.warning("Downloads will fall back to external mirrors only")
-        
+
         self.logger.info("Downloader recreated with updated config")
-    
+
     def update_config(self):
         """Update downloader with new config (called when config changes)"""
         self.recreate_downloader()
-    
+
     def start(self):
         """Start worker thread"""
         if not self.running:
@@ -110,7 +110,7 @@ class DownloadWorker:
             self.thread = threading.Thread(target=self._worker_loop, daemon=True)
             self.thread.start()
             self.logger.info("Download worker started")
-    
+
     def stop(self):
         """Stop worker thread and cancel any active downloads"""
         self.logger.info("Stopping download worker...")
@@ -138,27 +138,27 @@ class DownloadWorker:
                 self.logger.warning("Worker thread did not stop gracefully within timeout")
             else:
                 self.logger.info("Download worker stopped")
-    
+
     def get_fast_download_info(self):
         """Get current fast download status"""
         return self.downloader.get_fast_download_info()
-    
+
     def refresh_fast_download_info_if_stale(self):
         """Refresh fast download info if it's been more than an hour"""
         return self.downloader.refresh_fast_download_info(force=False)
-    
+
     def _worker_loop(self):
         """Main worker loop"""
         delay = self.config.get('downloads', 'delay', default=2)
         resume_attempts = self.config.get('downloads', 'resume_attempts', default=3)
-        
+
         while self.running:
             item = self.queue.get_next()
-            
+
             if item is None:
                 time.sleep(1)
                 continue
-            
+
             # Fetch download info FIRST (before setting current_download)
             self.logger.info(f"Fetching download info: {item['md5']}")
             try:
@@ -200,7 +200,7 @@ class DownloadWorker:
             except Exception as e:
                 self.logger.error(f"Download error: {item['md5']} - {e}")
                 self.queue.mark_complete(item['md5'], False, error=str(e), filename=filename)
-            
+
             # Rate limiting
             if self.queue.queue:
                 time.sleep(delay)

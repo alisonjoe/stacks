@@ -1,4 +1,6 @@
 import random
+from pathlib import Path # 记得导入
+
 
 def orchestrate_download(d, input_string, prefer_mirror=None, resume_attempts=3, filename=None, links=None):
     """Download a file from Anna's Archive.
@@ -24,6 +26,18 @@ def orchestrate_download(d, input_string, prefer_mirror=None, resume_attempts=3,
     if filename is None or links is None:
         filename, links = d.get_download_links(md5)
 
+    # ---------------- [修改开始] ----------------
+    # 严格检查元数据文件名
+    if filename and filename != "Unknown":
+        # 定义白名单
+        valid_extensions = {'.epub', '.mobi', '.azw3'}
+        file_ext = Path(filename).suffix.lower()
+
+        # 如果文件后缀存在，但不在白名单里 (比如是 .pdf)
+        if file_ext and file_ext not in valid_extensions:
+            d.logger.error(f"ABORTING: MD5 {md5} metadata says it is '{file_ext}', but we only want epub/mobi/azw3.")
+            return False, False, None
+    # ---------------- [修改结束] ----------------
     # Try fast download first
     if d.fast_download_enabled and d.fast_download_key:
         if hasattr(d, 'status_callback'):

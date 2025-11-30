@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
+
 def calculate_md5(filepath):
     """Calculate MD5 hash of a file."""
     hash_md5 = hashlib.md5()
@@ -38,6 +39,22 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
             # Clean filename (remove invalid characters)
             filename = re.sub(r'[<>:"/\\|?*]', '_', title)
 
+        # ---------------- [修改开始] ----------------
+        # 强制后缀检查
+        file_ext = Path(filename).suffix.lower()
+        allowed = {'.epub', '.mobi', '.azw3'}
+
+        # 如果检测到后缀是 PDF/TXT 等，直接返回 None
+        if file_ext and file_ext not in allowed:
+            d.logger.error(f"Download blocked: Filename '{filename}' is not epub/mobi/azw3.")
+            return None
+
+        # 如果没有后缀，强制加上 .epub (防止保存成无后缀文件)
+        if not file_ext:
+            d.logger.warning(f"Filename has no extension: {filename}, defaulting to .epub")
+            filename = filename + '.epub'
+        # ---------------- [修改结束] ----------------
+
         # Validate extension - warn if suspicious but don't modify
         from stacks.constants import LEGAL_FILES
         file_ext = Path(filename).suffix.lower()
@@ -47,18 +64,18 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
             filename = filename + '.epub'
         elif file_ext not in LEGAL_FILES:
             d.logger.warning(f"Unusual file extension: {file_ext} (not in known legal files list)")
-        
+
         # Get unique path
         base_final_path = d.output_dir / filename
         final_path = d.get_unique_filename(base_final_path)
         temp_path = d.incomplete_dir / f"{final_path.name}.part"
-        
+
         # Check for partial download
         downloaded = 0
         if temp_path.exists() and supports_resume:
             downloaded = temp_path.stat().st_size
             d.logger.info(f"Found partial file: {downloaded}/{total_size if total_size else '?'} bytes")
-        
+
         # Download with resume
         for attempt in range(resume_attempts):
             try:
@@ -66,9 +83,9 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
                 if downloaded > 0 and supports_resume:
                     headers['Range'] = f'bytes={downloaded}-'
                     d.logger.info(f"Resuming from byte {downloaded}")
-                
+
                 response = d.session.get(download_url, headers=headers, stream=True, timeout=30)
-                
+
                 if downloaded > 0 and response.status_code not in [200, 206]:
                     d.logger.warning(f"Resume not supported (status {response.status_code}), starting fresh")
                     downloaded = 0
@@ -83,7 +100,7 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
                             total_size = downloaded + int(content_length)
                         else:
                             total_size = int(content_length)
-                
+
                 # Download
                 mode = 'ab' if downloaded > 0 else 'wb'
                 with open(temp_path, mode) as f:
@@ -91,7 +108,7 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
                         if chunk:
                             f.write(chunk)
                             downloaded += len(chunk)
-                            
+
                             if d.progress_callback and total_size:
                                 percent = (downloaded / total_size) * 100
                                 d.progress_callback({
@@ -99,7 +116,7 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
                                     'downloaded': downloaded,
                                     'percent': round(percent, 1)
                                 })
-                
+
                 # Verify complete
                 if total_size and downloaded < total_size:
                     raise Exception(f"Incomplete download: {downloaded}/{total_size} bytes")
@@ -131,7 +148,7 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
 
                 d.logger.info(f"Downloaded: {final_path.name}")
                 return final_path
-                
+
             except requests.exceptions.ChunkedEncodingError:
                 if attempt < resume_attempts - 1 and supports_resume:
                     d.logger.warning(f"Connection interrupted, resuming (attempt {attempt + 1}/{resume_attempts})")
@@ -139,16 +156,16 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
                     continue
                 else:
                     return None
-                    
+
             except Exception as e:
                 d.logger.error(f"Download error: {e}")
                 if attempt < resume_attempts - 1 and supports_resume:
                     time.sleep(2 ** attempt)
                     continue
                 return None
-        
+
         return None
-        
+
     except Exception as e:
         d.logger.error(f"Fatal download error: {e}")
         return None
