@@ -22,7 +22,7 @@ RESET = "\033[0m"                     # reset
 def print_logo(version: str):
     """Display the super cool STACKS logo"""
     dashes = '─' * (52 - len(version))
-    
+
     print(f"{BG}{PURPLE} ┌───────────────────────────────────────────────────────────┐ {RESET}")
     print(f"{BG}{PURPLE} │                                                           {PURPLE}│ {RESET}")
     print(f"{BG}{PURPLE} │{PINK}     ▄████▄ ████████  ▄█▄     ▄████▄  ██    ▄██ ▄████▄     {PURPLE}│ {RESET}")
