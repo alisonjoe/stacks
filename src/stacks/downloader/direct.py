@@ -39,6 +39,16 @@ def download_direct(d, download_url, title=None, total_size=None, supports_resum
             # Clean filename (remove invalid characters)
             filename = re.sub(r'[<>:"/\\|?*]', '_', title)
 
+        # ------------------ [新增代码开始] ------------------
+        # 关键词黑名单检查
+        # 如果文件名包含 "Anna's Archive"，说明抓取到了网页标题，而不是书名
+        forbidden_keywords = ["anna's archive", "anna’s archive", "annas archive"]
+
+        if any(keyword in filename.lower() for keyword in forbidden_keywords):
+            d.logger.error(f"Aborting download: Invalid filename '{filename}' detected (likely downloaded a webpage instead of a book).")
+            return None
+        # ------------------ [新增代码结束] ------------------
+
         # ---------------- [修改开始] ----------------
         # 强制后缀检查
         file_ext = Path(filename).suffix.lower()
